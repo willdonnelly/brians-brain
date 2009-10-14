@@ -2,7 +2,7 @@ import Data.Array
 import System.Random
 import Graphics.UI.SDL as SDL
 
-data Cell  = CellOff | CellDying | CellOn deriving (Eq, Ord, Enum, Show)
+data Cell  = Off | Dying | On deriving (Eq, Enum)
 type World = Array (Int, Int) Cell
 type Peers = (Cell, Int)
 
@@ -15,10 +15,10 @@ fillSize = cellSize - border
 screenX  = worldX * cellSize
 screenY  = worldY * cellSize
 
-stepCell (CellOff,   2) = CellOn
-stepCell (CellOff,   _) = CellOff
-stepCell (CellDying, _) = CellOff
-stepCell (CellOn,    _) = CellDying
+stepCell (Off,   2) = On
+stepCell (Off,   _) = Off
+stepCell (Dying, _) = Off
+stepCell (On,    _) = Dying
 
 stepWorld w    = stepCell `fmap` peersArray w
 peersArray w   = getPeers w `fmap` indexArray worldX worldY
@@ -29,7 +29,7 @@ getPeers world pos@(x,y) = (world ! pos, living neighbors)
             x <- [x-1 .. x+1]
             y <- [y-1 .. y+1]
             return $ world ! (clip (1, worldX) x, clip (1, worldY) y)
-        living = length . filter (== CellOn)
+        living = length . filter (== On)
 
 clip bounds@(min, max) val
   | val < min = clip bounds $ val + max - min
@@ -54,6 +54,6 @@ drawWorld surface world = do
 drawCell s x y cell = SDL.fillRect s (Just rect) $ color cell
   where rect    = SDL.Rect (scale x) (scale y) fillSize fillSize
         scale x = (x - 1) * cellSize
-        color CellOn    = SDL.Pixel 0x00FFFFFF
-        color CellDying = SDL.Pixel 0x00888888
-        color CellOff   = SDL.Pixel 0x00000000
+        color On    = SDL.Pixel 0x00FFFFFF
+        color Dying = SDL.Pixel 0x00888888
+        color Off   = SDL.Pixel 0x00000000

@@ -9,6 +9,9 @@ data Cell  = CellOff | CellDying | CellOn deriving (Eq, Ord, Enum, Show)
 data World = World Int Int [[Cell]]
 type Peers = (Cell, Int)
 
+cellSize = 8
+border   = 1
+
 stepCell :: Peers -> Cell
 stepCell (CellOff,   2) = CellOn
 stepCell (CellOff,   _) = CellOff
@@ -34,15 +37,7 @@ stepWorld world@(World mx my _) = World mx my $ split mx cells
 -- | A helper function that the standard Prelude seems
 --   to lack.
 split :: Int -> [a] -> [[a]]
-split n = unfoldr splitNext
-  where splitNext [] = Nothing
-        splitNext xs = Just $ splitAt n xs
-
-printWorld (World mx my cells) = unlines . map showRow $ cells
-  where showRow = concatMap showCell
-        showCell CellOn    = "# "
-        showCell CellDying = "+ "
-        showCell CellOff   = ". "
+split n = unfoldr (\x -> case x of [] -> Nothing; xs -> Just $ splitAt n xs)
 
 randWorld :: RandomGen r => Int -> Int -> r -> World
 randWorld x y = World x y . take y . split x . map toEnum . randomRs (0,2)
@@ -69,6 +64,3 @@ drawCell x y cell = color cell $ polygon points
         points   = [(sx,sy), (sx+w, sy), (sx+w, sy+h), (sx, sy+h)]
         (sx, sy) = ((x - 1) * cellSize, (y - 1) * cellSize)
         (w, h)   = (cellSize - border, cellSize - border)
-
-cellSize = 8
-border = 1

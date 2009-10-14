@@ -1,55 +1,47 @@
-import Data.Array
-import System.Random
-import Graphics.UI.SDL as SDL
+import Data.Array             -- Used to store the world state for processing
+import System.Random          -- Used to generate the initial random world
+import Control.Monad          -- Used for some fancy looping constructs
+import Control.Concurrent     -- Used to fork the quit event handler
+import Graphics.UI.SDL as SDL -- Used to draw the pretty pictures
 
 data Cell  = Off | Dying | On deriving (Eq, Enum)
 
-title    = "Brian's Purely Functional Brain"
-cellSize = 8
-border   = 1
-worldX   = 90
-worldY   = 90
-fillSize = cellSize - border
-screenX  = worldX * cellSize
-screenY  = worldY * cellSize
+worldX   = 90                -- The horizontal size of the world
+worldY   = 90                -- The vertical size of the world
+cellSize = 8                 -- The overall size of a cell
+border   = 1                 -- The border width between cells
+screenX  = worldX * cellSize -- The horizontal size of the world, in pixels
+screenY  = worldY * cellSize -- The vertical size of the world, in pixels
+fillSize = cellSize - border -- The size of the filled area in each cell
 
-stepCell (Off,   2) = On
-stepCell (Off,   _) = Off
-stepCell (Dying, _) = Off
-stepCell (On,    _) = Dying
+stepCell (Off,   2) = On     -- If a dead cell has 2 live neighbors, turn on
+stepCell (Off,   _) = Off    --   Otherwise, just stay turned off
+stepCell (Dying, _) = Off    -- Dying cells always turn off
+stepCell (On,    _) = Dying  -- Live cells always start to die
 
-stepWorld w    = stepCell `fmap` peersArray w
-peersArray w   = getPeers w `fmap` indexArray worldX worldY
-indexArray x y = array ((1,1),(x,y)) [((x,y),(x,y)) | x <- [1..x], y <- [1..y]]
+indexArray x y = listArray ((1,1),(x,y)) [(a,b) | a <- [1..x], b <- [1..y]]
+stepWorld w   = fmap stepCell . fmap (getPeers w) $ indexArray worldX worldY
 
-getPeers world (x,y) = (world ! (x,y), living neighbors)
-  where living = length . filter (== On)
-        neighbors = do x <- [x-1 .. x+1]
-                       y <- [y-1 .. y+1]
-                       return $ world ! (clip worldX x, clip worldY y)
+getPeers world (x,y) = (world ! (x,y), length . filter (== On) $ neighbors)
+  where neighbors = [worldLookup x y | x <- [x-1 .. x+1], y <- [y-1 .. y+1]]
+        worldLookup x y = world ! (clip worldX x, clip worldY y)
+        clip max val | val <  1  = clip max $ val + max - 1
+                     | val > max = clip max $ val - max + 1
+                     | otherwise = val
 
-clip max val | val <  1  = clip max $ val + max - 1
-             | val > max = clip max $ val - max + 1
-             | otherwise = val
-
-randWorld x y = array ((1,1),(x,y)) . zip indices . map toEnum . randomRs (0,2)
-  where indices = [ (a, b) | a <- [1..x], b <- [1..y] ]
-
-main = do initWorld <- randWorld worldX worldY `fmap` newStdGen
+main = do rng <- newStdGen
           SDL.init [SDL.InitVideo]
-          SDL.setCaption title title
+          SDL.setCaption "Brian's Purely Functional Brain" "Brian's Brain"
           surface <- SDL.setVideoMode screenX screenY 24 [SDL.DoubleBuf]
-          mapM (drawWorld surface) (iterate stepWorld initWorld)
+          forkIO . forever $ waitEvent >>= \e -> when (e == Quit) quit
+          mapM (drawWorld surface) (iterate stepWorld $ world rng)
+  where world = listArray ((1,1),(worldX,worldY)) . map toEnum . randomRs (0,2)
 
-drawWorld surface world = do
-    sequence $ do x <- [1..worldX]
-                  y <- [1..worldY]
-                  return $ drawCell surface x y $ world ! (x,y)
-    SDL.flip surface
-
-drawCell s x y cell = SDL.fillRect s (Just rect) $ color cell
-  where rect    = SDL.Rect (scale x) (scale y) fillSize fillSize
-        scale n = (n - 1) * cellSize
-        color On    = SDL.Pixel 0x00FFFFFF
-        color Dying = SDL.Pixel 0x00888888
-        color Off   = SDL.Pixel 0x00000000
+drawWorld s w = do sequence [draw x y | x <- [1..worldX], y <- [1..worldY]]
+                   SDL.flip s
+  where draw x y = SDL.fillRect s (Just rect) . color $ w ! (x,y)
+          where rect    = SDL.Rect (scale x) (scale y) fillSize fillSize
+                scale n = (n - 1) * cellSize
+                color On    = SDL.Pixel 0x00FFFFFF
+                color Dying = SDL.Pixel 0x00888888
+                color Off   = SDL.Pixel 0x00000000

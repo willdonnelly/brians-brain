@@ -25,16 +25,14 @@ peersArray w   = getPeers w `fmap` indexArray worldX worldY
 indexArray x y = array ((1,1),(x,y)) [((x,y),(x,y)) | x <- [1..x], y <- [1..y]]
 
 getPeers world pos@(x,y) = (world ! pos, living neighbors)
-  where neighbors = do
-            x <- [x-1 .. x+1]
-            y <- [y-1 .. y+1]
-            return $ world ! (clip (1, worldX) x, clip (1, worldY) y)
-        living = length . filter (== On)
+  where living = length . filter (== On)
+        neighbors = do x <- [x-1 .. x+1]
+                       y <- [y-1 .. y+1]
+                       return $ world ! (clip worldX x, clip worldY y)
 
-clip bounds@(min, max) val
-  | val < min = clip bounds $ val + max - min
-  | val > max = clip bounds $ val + min - max
-  | otherwise = val
+clip max val | val <  1  = clip bounds $ val + max - 1
+             | val > max = clip bounds $ val - max + 1
+             | otherwise = val
 
 randWorld x y = array ((1,1),(x,y)) . zip indices . map toEnum . randomRs (0,2)
   where indices = [(x,y) | x <- [1..x], y <- [1..y]]

@@ -58,9 +58,9 @@ drawWorld w (World mx my cells) = drawInWindow w $ do
   where ixs = [(x,y) | y <- [1..my], x <- [1..mx]]
 
 drawCell x y cell = color cell $ polygon points
-  where color CellOn    = withRGB $ RGB 255 255 255
-        color CellDying = withRGB $ RGB 127 127 127
-        color CellOff   = withRGB $ RGB 0   0   0
+  where color CellOn    = withColor White
+        color CellDying = withColor Blue
+        color CellOff   = withColor Black
         points   = [(sx,sy), (sx+w, sy), (sx+w, sy+h), (sx, sy+h)]
         (sx, sy) = ((x - 1) * cellSize, (y - 1) * cellSize)
         (w, h)   = (cellSize - border, cellSize - border)

@@ -40,8 +40,8 @@ main = do rng <- newStdGen
 drawWorld s w = do sequence [draw x y | x <- [1..worldX], y <- [1..worldY]]
                    SDL.flip s
   where draw x y = SDL.fillRect s (Just rect) . color $ w ! (x,y)
-          where rect    = SDL.Rect (scale x) (scale y) fillSize fillSize
-                scale n = (n - 1) * cellSize
+          where rect        = SDL.Rect (scale x) (scale y) fillSize fillSize
+                scale n     = (n - 1) * cellSize
                 color On    = SDL.Pixel 0x00FFFFFF
                 color Dying = SDL.Pixel 0x00888888
                 color Off   = SDL.Pixel 0x00000000

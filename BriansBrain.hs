@@ -1,9 +1,10 @@
 import Random ( newStdGen, randomRIO, randomRs, RandomGen )
 import Data.List
 import Control.Arrow
-import Graphics.HGL
+import Graphics.UI.SDL hiding (index)
 import Control.Monad
 import Control.Concurrent
+import Prelude hiding (flip)
 
 data Cell  = CellOff | CellDying | CellOn deriving (Eq, Ord, Enum, Show)
 data World = World Int Int [[Cell]]
@@ -44,23 +45,28 @@ randWorld x y = World x y . take y . split x . map toEnum . randomRs (0,2)
 
 main = do
     world <- randWorld sizeX sizeY `fmap` newStdGen
-    let worlds = iterate stepWorld $ world
-    runWindow title (sizeX*cellSize, sizeY*cellSize) $ \window -> do
-        forM_ worlds $ \world -> do
-            drawWorld window world
-            threadDelay 250000
+    withInit [InitVideo] $ do
+        setCaption title title
+        surface <- setVideoMode (sizeX*cellSize) (sizeY*cellSize) 24 [DoubleBuf]
+        forM_ (take 10 $ iterate stepWorld world) $ \(World mx my cells) -> do
+            event <- pollEvent
+            case event of
+                Quit -> quit
+                _ -> return ()
+            sequence $ do
+                x <- [1..mx]
+                y <- [1..my]
+                return $ drawCell surface x y $ cells `index` (x,y)
+            flip surface
+--            threadDelay 250000
   where title = "Brian's Purely Functional Brain"
         sizeX = 90
         sizeY = 90
 
-drawWorld w (World mx my cells) = drawInWindow w $ do
-    forM_ ixs $ \(x,y) -> drawCell x y $ index cells (x, y)
-  where ixs = [(x,y) | y <- [1..my], x <- [1..mx]]
-
-drawCell x y cell = color cell $ polygon points
-  where color CellOn    = withColor White
-        color CellDying = withColor Blue
-        color CellOff   = withColor Black
-        points   = [(sx,sy), (sx+w, sy), (sx+w, sy+h), (sx, sy+h)]
+drawCell s x y cell = fillRect s (Just rect) $ color cell
+  where color CellOn    = Pixel 0x00FFFFFF
+        color CellDying = Pixel 0x00888888
+        color CellOff   = Pixel 0x00000000
+        rect = Rect sx sy w h
         (sx, sy) = ((x - 1) * cellSize, (y - 1) * cellSize)
         (w, h)   = (cellSize - border, cellSize - border)

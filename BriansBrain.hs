@@ -3,8 +3,6 @@ import System.Random
 import Graphics.UI.SDL as SDL
 
 data Cell  = Off | Dying | On deriving (Eq, Enum)
-type World = Array (Int, Int) Cell
-type Peers = (Cell, Int)
 
 title    = "Brian's Purely Functional Brain"
 cellSize = 8
@@ -24,18 +22,18 @@ stepWorld w    = stepCell `fmap` peersArray w
 peersArray w   = getPeers w `fmap` indexArray worldX worldY
 indexArray x y = array ((1,1),(x,y)) [((x,y),(x,y)) | x <- [1..x], y <- [1..y]]
 
-getPeers world pos@(x,y) = (world ! pos, living neighbors)
+getPeers world (x,y) = (world ! (x,y), living neighbors)
   where living = length . filter (== On)
         neighbors = do x <- [x-1 .. x+1]
                        y <- [y-1 .. y+1]
                        return $ world ! (clip worldX x, clip worldY y)
 
-clip max val | val <  1  = clip bounds $ val + max - 1
-             | val > max = clip bounds $ val - max + 1
+clip max val | val <  1  = clip max $ val + max - 1
+             | val > max = clip max $ val - max + 1
              | otherwise = val
 
 randWorld x y = array ((1,1),(x,y)) . zip indices . map toEnum . randomRs (0,2)
-  where indices = [(x,y) | x <- [1..x], y <- [1..y]]
+  where indices = [ (a, b) | a <- [1..x], b <- [1..y] ]
 
 main = do initWorld <- randWorld worldX worldY `fmap` newStdGen
           SDL.init [SDL.InitVideo]
@@ -51,7 +49,7 @@ drawWorld surface world = do
 
 drawCell s x y cell = SDL.fillRect s (Just rect) $ color cell
   where rect    = SDL.Rect (scale x) (scale y) fillSize fillSize
-        scale x = (x - 1) * cellSize
+        scale n = (n - 1) * cellSize
         color On    = SDL.Pixel 0x00FFFFFF
         color Dying = SDL.Pixel 0x00888888
         color Off   = SDL.Pixel 0x00000000

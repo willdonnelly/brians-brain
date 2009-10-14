@@ -1,6 +1,5 @@
 import Random
 import Data.Array
---import Control.Monad
 import qualified Graphics.UI.SDL as SDL
 
 data Cell  = CellOff | CellDying | CellOn deriving (Eq, Ord, Enum, Show)
@@ -12,6 +11,7 @@ cellSize = 8
 border   = 1
 worldX   = 90
 worldY   = 90
+fillSize = cellSize - border
 screenX  = worldX * cellSize
 screenY  = worldY * cellSize
 
@@ -43,7 +43,7 @@ main = do initWorld <- randWorld worldX worldY `fmap` newStdGen
           SDL.init [SDL.InitVideo]
           SDL.setCaption title title
           surface <- SDL.setVideoMode screenX screenY 24 [SDL.DoubleBuf]
-          forM (iterate stepWorld initWorld) (drawWorld surface)
+          mapM (drawWorld surface) (iterate stepWorld initWorld)
 
 drawWorld surface world = do
     sequence $ do x <- [1..worldX]
@@ -52,9 +52,8 @@ drawWorld surface world = do
     SDL.flip surface
 
 drawCell s x y cell = SDL.fillRect s (Just rect) $ color cell
-  where color CellOn    = SDL.Pixel 0x00FFFFFF
+  where rect    = SDL.Rect (scale x) (scale y) fillSize fillSize
+        scale x = (x - 1) * cellSize
+        color CellOn    = SDL.Pixel 0x00FFFFFF
         color CellDying = SDL.Pixel 0x00888888
         color CellOff   = SDL.Pixel 0x00000000
-        rect = SDL.Rect sx sy w h
-        (sx, sy) = ((x - 1) * cellSize, (y - 1) * cellSize)
-        (w, h)   = (cellSize - border, cellSize - border)

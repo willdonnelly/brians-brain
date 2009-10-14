@@ -1,6 +1,6 @@
-import Random
 import Data.Array
-import qualified Graphics.UI.SDL as SDL
+import System.Random
+import Graphics.UI.SDL as SDL
 
 data Cell  = CellOff | CellDying | CellOn deriving (Eq, Ord, Enum, Show)
 type World = Array (Int, Int) Cell

@@ -3,6 +3,7 @@ import System.Random          -- Used to generate the initial random world
 import Control.Monad          -- Used for some fancy looping constructs
 import Control.Concurrent     -- Used to fork the quit event handler
 import Graphics.UI.SDL as SDL -- Used to draw the pretty pictures
+import Control.Parallel.Strategies
 
 data Cell  = Off | Dying | On deriving (Eq, Enum)
 
@@ -20,7 +21,8 @@ stepCell (Dying, _) = Off    -- Dying cells always turn off
 stepCell (On,    _) = Dying  -- Live cells always start to die
 
 indexArray x y = listArray ((1,1),(x,y)) [(a,b) | a <- [1..x], b <- [1..y]]
-stepWorld w    = fmap stepCell . fmap (getPeers w) $ indexArray worldX worldY
+stepWorld w    = newWorld `using` parArr rwhnf
+  where newWorld = fmap (stepCell . getPeers w) $ indexArray worldX worldY
 
 getPeers world (x,y) = (world ! (x,y), length . filter (== On) $ neighbors)
   where neighbors    = [getCell x y | x <- [x-1 .. x+1], y <- [y-1 .. y+1]]

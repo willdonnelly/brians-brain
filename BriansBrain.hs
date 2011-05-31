@@ -21,7 +21,7 @@ stepCell (Dying, _) = Off    -- Dying cells always turn off
 stepCell (On,    _) = Dying  -- Live cells always start to die
 
 indexArray x y = listArray ((1,1),(x,y)) [(a,b) | a <- [1..x], b <- [1..y]]
-stepWorld w    = newWorld `using` parArr rwhnf
+stepWorld w    = newWorld `using` parTraversable rpar
   where newWorld = fmap (stepCell . getPeers w) $ indexArray worldX worldY
 
 getPeers world (x,y) = (world ! (x,y), length . filter (== On) $ neighbors)
